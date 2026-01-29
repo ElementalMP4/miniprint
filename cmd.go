@@ -53,9 +53,18 @@ var cutCmd = &cobra.Command{
 	},
 }
 
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Start an HTTP server that allows communication with the printer",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return serve()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(printCmd)
 	rootCmd.AddCommand(cutCmd)
+	rootCmd.AddCommand(serveCmd)
 }
 
 func ExecuteCLI() error {

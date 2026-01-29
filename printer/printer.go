@@ -64,7 +64,6 @@ func (p *Printer) Initialise() {
 	p.Context = ctx
 
 	p.HardResetPrinter()
-	p.ApplyCodePage()
 }
 
 func (p *Printer) ApplyFont(font Font) {
@@ -283,6 +282,7 @@ func (p *Printer) Cut() {
 
 func (p *Printer) HardResetPrinter() {
 	p.Printer.WriteRaw([]byte{0x1B, 0x40})
+	p.ApplyCodePage()
 }
 
 func (p *Printer) LineBreak() {
