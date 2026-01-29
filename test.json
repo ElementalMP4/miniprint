@@ -1,0 +1,30 @@
+{
+  "elements": [
+    {
+      "type": "text",
+      "content": {
+        "text": "YOUR TEXT",
+        "font": "A",
+        "bold": true,
+        "alignment": "center"
+      }
+    },
+    {
+      "type": "linebreak"
+    },
+    {
+      "type": "table",
+      "content": {
+        "font": "A",
+        "columns": [
+          {"header": "Item", "width_pct": 60},
+          {"header": "Price", "width_pct": 40}
+        ],
+        "rows": [
+          ["Coffee", "£2.50"],
+          ["Tea", "£1.50"]
+        ]
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/hennedo/escpos"
@@ -84,7 +85,7 @@ func (t *Table) colWidths() []int {
 	used := 0
 
 	for i, col := range t.columns {
-		w := (totalWidth * col.WidthPct) / 100
+		w := int(math.Floor(float64((totalWidth * col.WidthPct) / 100)))
 		widths[i] = w
 		used += w
 	}
