@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"unicode/utf8"
@@ -94,7 +95,7 @@ func (p *Printer) ApplyAlignment(align Alignment) {
 	}
 }
 
-func (p *Printer) ResetPrinterState() {
+func (p *Printer) ApplyDefaultTextSettings() {
 	p.ApplyFont(FontA)
 	p.ApplyDoubleWidth(false)
 	p.ApplyAlignment(AlignLeft)
@@ -227,7 +228,7 @@ func (p *Printer) ApplyCodePage() {
 	p.Printer.WriteRaw([]byte{0x1B, 0x74, 0x13})
 }
 
-func (p *Printer) PrintText(text string, font Font, doubleWidth bool, align Alignment) {
+func (p *Printer) QueueText(text string, font Font, doubleWidth bool, align Alignment) {
 	text = sanitizeText(text)
 	p.ApplyFont(font)
 	p.ApplyDoubleWidth(doubleWidth)
@@ -239,7 +240,42 @@ func (p *Printer) PrintText(text string, font Font, doubleWidth bool, align Alig
 		p.Printer.Write("\n")
 	}
 
-	p.ResetPrinterState()
+	p.ApplyDefaultTextSettings()
+}
+
+func (p *Printer) QueueReceiptFormat(format *ReceiptFormat) error {
+	for i, element := range format.Elements {
+		if err := printElement(p, element); err != nil {
+			return fmt.Errorf("failed to print element %d: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func (p *Printer) QueueTable(t *Table) {
+	p.ApplyFont(t.font)
+	p.ApplyDoubleWidth(false)
+	p.ApplyAlignment(AlignLeft)
+
+	lines := t.renderLines()
+	for _, l := range lines {
+		p.Printer.Write(sanitizeText(l))
+		p.Printer.Write("\n")
+	}
+
+	p.ApplyDefaultTextSettings()
+}
+
+func (p *Printer) Execute() {
+	p.Printer.PrintAndCut()
+}
+
+func (p *Printer) ExecuteWithoutCut() {
+	p.Printer.Print()
+}
+
+func (p *Printer) Cut() {
+	p.Printer.Cut()
 }
 
 func (p *Printer) HardResetPrinter() {

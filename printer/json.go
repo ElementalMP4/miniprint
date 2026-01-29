@@ -3,7 +3,6 @@ package printer
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 )
 
 type ReceiptFormat struct {
@@ -28,27 +27,13 @@ type TableElement struct {
 	Rows    [][]string    `json:"rows"`
 }
 
-func LoadReceiptFormat(filename string) (*ReceiptFormat, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
+func ReceiptFormatFromJson(jsonContent string) (*ReceiptFormat, error) {
 	var format ReceiptFormat
-	if err := json.Unmarshal(data, &format); err != nil {
+	if err := json.Unmarshal([]byte(jsonContent), &format); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
 	return &format, nil
-}
-
-func PrintReceipt(printer *Printer, format *ReceiptFormat) error {
-	for i, element := range format.Elements {
-		if err := printElement(printer, element); err != nil {
-			return fmt.Errorf("failed to print element %d: %w", i, err)
-		}
-	}
-	return nil
 }
 
 func printElement(printer *Printer, element ReceiptElement) error {
@@ -74,7 +59,7 @@ func printTextElement(printer *Printer, content map[string]interface{}) error {
 	font := parseFont(fontStr)
 	alignment := parseAlignment(alignmentStr)
 
-	printer.PrintText(text, font, bold, alignment)
+	printer.QueueText(text, font, bold, alignment)
 	return nil
 }
 
@@ -126,7 +111,7 @@ func printTableElement(printer *Printer, content map[string]interface{}) error {
 		table.AddRow(rowStrings...)
 	}
 
-	table.Print(printer)
+	printer.QueueTable(table)
 	return nil
 }
 

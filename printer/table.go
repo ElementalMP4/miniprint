@@ -193,17 +193,3 @@ func padRight(s string, width int) string {
 	}
 	return s + strings.Repeat(" ", width-l)
 }
-
-func (t *Table) Print(p *Printer) {
-	p.ApplyFont(t.font)
-	p.ApplyDoubleWidth(false)
-	p.ApplyAlignment(AlignLeft)
-
-	lines := t.renderLines()
-	for _, l := range lines {
-		p.Printer.Write(sanitizeText(l))
-		p.Printer.Write("\n")
-	}
-
-	p.ResetPrinterState()
-}
