@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"miniprint/printer"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -18,22 +19,18 @@ var printCmd = &cobra.Command{
 	Short: "Print a receipt from a JSON file",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		printer, ctx := GetPrinter()
-		defer ctx.Close()
-		ResetPrinter(printer)
-
-		format, err := LoadReceiptFormat(args[0])
+		format, err := printer.LoadReceiptFormat(args[0])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading JSON file: %v\n", err)
 			os.Exit(1)
 		}
 
-		if err := PrintReceipt(printer, format); err != nil {
+		if err := printer.PrintReceipt(&printerInterface, format); err != nil {
 			fmt.Fprintf(os.Stderr, "Error printing receipt: %v\n", err)
 			os.Exit(1)
 		}
 
-		printer.PrintAndCut()
+		printerInterface.Printer.PrintAndCut()
 	},
 }
 

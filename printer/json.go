@@ -1,25 +1,20 @@
-package main
+package printer
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/hennedo/escpos"
 )
 
-// ReceiptFormat represents the complete receipt structure
 type ReceiptFormat struct {
 	Elements []ReceiptElement `json:"elements"`
 }
 
-// ReceiptElement represents a single element in the receipt
 type ReceiptElement struct {
 	Type    string                 `json:"type"` // "text", "linebreak", "table"
 	Content map[string]interface{} `json:"content,omitempty"`
 }
 
-// TextElement represents a text element
 type TextElement struct {
 	Text      string `json:"text"`
 	Font      string `json:"font"` // "A" or "B"
@@ -27,14 +22,12 @@ type TextElement struct {
 	Alignment string `json:"alignment"` // "left", "center", "right"
 }
 
-// TableElement represents a table element
 type TableElement struct {
 	Font    string        `json:"font"`
 	Columns []TableColumn `json:"columns"`
 	Rows    [][]string    `json:"rows"`
 }
 
-// LoadReceiptFormat loads a receipt format from a JSON file
 func LoadReceiptFormat(filename string) (*ReceiptFormat, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -49,8 +42,7 @@ func LoadReceiptFormat(filename string) (*ReceiptFormat, error) {
 	return &format, nil
 }
 
-// PrintReceipt prints a receipt based on the format
-func PrintReceipt(printer *escpos.Escpos, format *ReceiptFormat) error {
+func PrintReceipt(printer *Printer, format *ReceiptFormat) error {
 	for i, element := range format.Elements {
 		if err := printElement(printer, element); err != nil {
 			return fmt.Errorf("failed to print element %d: %w", i, err)
@@ -59,12 +51,12 @@ func PrintReceipt(printer *escpos.Escpos, format *ReceiptFormat) error {
 	return nil
 }
 
-func printElement(printer *escpos.Escpos, element ReceiptElement) error {
+func printElement(printer *Printer, element ReceiptElement) error {
 	switch element.Type {
 	case "text":
 		return printTextElement(printer, element.Content)
 	case "linebreak":
-		LineBreak(printer)
+		printer.LineBreak()
 		return nil
 	case "table":
 		return printTableElement(printer, element.Content)
@@ -73,7 +65,7 @@ func printElement(printer *escpos.Escpos, element ReceiptElement) error {
 	}
 }
 
-func printTextElement(printer *escpos.Escpos, content map[string]interface{}) error {
+func printTextElement(printer *Printer, content map[string]interface{}) error {
 	text, _ := content["text"].(string)
 	fontStr, _ := content["font"].(string)
 	bold, _ := content["bold"].(bool)
@@ -82,11 +74,11 @@ func printTextElement(printer *escpos.Escpos, content map[string]interface{}) er
 	font := parseFont(fontStr)
 	alignment := parseAlignment(alignmentStr)
 
-	PrintText(printer, text, font, bold, alignment)
+	printer.PrintText(text, font, bold, alignment)
 	return nil
 }
 
-func printTableElement(printer *escpos.Escpos, content map[string]interface{}) error {
+func printTableElement(printer *Printer, content map[string]interface{}) error {
 	fontStr, _ := content["font"].(string)
 	font := parseFont(fontStr)
 

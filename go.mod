@@ -1,4 +1,4 @@
-module print-test
+module miniprint
 
 go 1.24.5
 

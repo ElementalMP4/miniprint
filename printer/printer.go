@@ -1,4 +1,4 @@
-package main
+package printer
 
 import (
 	"log"
@@ -8,12 +8,6 @@ import (
 	"github.com/google/gousb"
 	"github.com/hennedo/escpos"
 )
-
-/*
-   =====================
-   Public types & enums
-   =====================
-*/
 
 type Alignment int
 type Font int
@@ -29,24 +23,17 @@ const (
 	FontB
 )
 
-/*
-   =====================
-   USB printer config
-   =====================
-*/
-
 const (
 	VendorID  gousb.ID = 0x04b8 // Epson
 	ProductID gousb.ID = 0x0202 // TM-T88V
 )
 
-/*
-   =====================
-   Printer setup
-   =====================
-*/
+type Printer struct {
+	Printer *escpos.Escpos
+	Context *gousb.Context
+}
 
-func GetPrinter() (*escpos.Escpos, *gousb.Context) {
+func (p *Printer) Initialise() {
 	ctx := gousb.NewContext()
 
 	dev, err := ctx.OpenDeviceWithVIDPID(VendorID, ProductID)
@@ -72,59 +59,51 @@ func GetPrinter() (*escpos.Escpos, *gousb.Context) {
 		log.Fatal(err)
 	}
 
-	return escpos.New(ep), ctx
+	p.Printer = escpos.New(ep)
+	p.Context = ctx
+
+	p.HardResetPrinter()
+	p.ApplyCodePage()
 }
 
-/*
-   =====================
-   ESC/POS state helpers
-   =====================
-*/
-
-func applyFont(p *escpos.Escpos, font Font) {
+func (p *Printer) ApplyFont(font Font) {
 	switch font {
 	case FontB:
-		p.WriteRaw([]byte{0x1B, 0x4D, 0x01}) // ESC M 1
+		p.Printer.WriteRaw([]byte{0x1B, 0x4D, 0x01}) // ESC M 1
 	default:
-		p.WriteRaw([]byte{0x1B, 0x4D, 0x00}) // ESC M 0
+		p.Printer.WriteRaw([]byte{0x1B, 0x4D, 0x00}) // ESC M 0
 	}
 }
 
-func applyDoubleWidth(p *escpos.Escpos, enabled bool) {
+func (p *Printer) ApplyDoubleWidth(enabled bool) {
 	if enabled {
-		p.WriteRaw([]byte{0x1D, 0x21, 0x10}) // GS ! double width
+		p.Printer.WriteRaw([]byte{0x1D, 0x21, 0x10}) // GS ! double width
 	} else {
-		p.WriteRaw([]byte{0x1D, 0x21, 0x00}) // GS ! normal
+		p.Printer.WriteRaw([]byte{0x1D, 0x21, 0x00}) // GS ! normal
 	}
 }
 
-func applyAlignment(p *escpos.Escpos, align Alignment) {
+func (p *Printer) ApplyAlignment(align Alignment) {
 	switch align {
 	case AlignCenter:
-		p.WriteRaw([]byte{0x1B, 0x61, 0x01}) // ESC a 1
+		p.Printer.WriteRaw([]byte{0x1B, 0x61, 0x01}) // ESC a 1
 	case AlignRight:
-		p.WriteRaw([]byte{0x1B, 0x61, 0x02}) // ESC a 2
+		p.Printer.WriteRaw([]byte{0x1B, 0x61, 0x02}) // ESC a 2
 	default:
-		p.WriteRaw([]byte{0x1B, 0x61, 0x00}) // ESC a 0
+		p.Printer.WriteRaw([]byte{0x1B, 0x61, 0x00}) // ESC a 0
 	}
 }
 
-func resetPrinterState(p *escpos.Escpos) {
-	applyFont(p, FontA)
-	applyDoubleWidth(p, false)
-	applyAlignment(p, AlignLeft)
+func (p *Printer) ResetPrinterState() {
+	p.ApplyFont(FontA)
+	p.ApplyDoubleWidth(false)
+	p.ApplyAlignment(AlignLeft)
 }
 
-/*
-   =====================
-   Layout logic
-   =====================
-*/
-
 func lineWidth(font Font, doubleWidth bool) int {
-	width := 48
+	width := 46
 	if font == FontB {
-		width = 62
+		width = 60
 	}
 	if doubleWidth {
 		width /= 2
@@ -152,12 +131,7 @@ func alignLine(line string, width int, align Alignment) string {
 	}
 }
 
-func WrapAndAlignText(
-	text string,
-	font Font,
-	doubleWidth bool,
-	align Alignment,
-) []string {
+func wrapAndAlignText(text string, font Font, doubleWidth bool, align Alignment) []string {
 
 	width := lineWidth(font, doubleWidth)
 	words := strings.Fields(text)
@@ -168,7 +142,7 @@ func WrapAndAlignText(
 	for _, word := range words {
 		wordLen := runeLen(word)
 
-		// Hard-break extremely long words
+		// Hard-break long words
 		if wordLen > width {
 			if current != "" {
 				lines = append(lines, alignLine(current, width, align))
@@ -237,10 +211,10 @@ func runeLen(s string) int {
 
 func sanitizeText(s string) string {
 	replacer := strings.NewReplacer(
-		"£", "\x9C", // CP858 pound
-		"€", "\xD5", // CP858 euro
-		"–", "-", // en dash
-		"—", "-", // em dash
+		"£", "\x9C",
+		"€", "\xD5",
+		"–", "-",
+		"—", "-",
 		"“", "\"",
 		"”", "\"",
 		"’", "'",
@@ -249,46 +223,29 @@ func sanitizeText(s string) string {
 	return replacer.Replace(s)
 }
 
-func applyCodePage(p *escpos.Escpos) {
-	// ESC t 19 → CP858 (supports £ and €)
-	p.WriteRaw([]byte{0x1B, 0x74, 0x13})
+func (p *Printer) ApplyCodePage() {
+	p.Printer.WriteRaw([]byte{0x1B, 0x74, 0x13})
 }
 
-/*
-   =====================
-   High-level print API
-   =====================
-*/
-
-func PrintText(
-	p *escpos.Escpos,
-	text string,
-	font Font,
-	doubleWidth bool,
-	align Alignment,
-) {
-	ResetPrinter(p)
-	applyCodePage(p)
-
+func (p *Printer) PrintText(text string, font Font, doubleWidth bool, align Alignment) {
 	text = sanitizeText(text)
+	p.ApplyFont(font)
+	p.ApplyDoubleWidth(doubleWidth)
+	p.ApplyAlignment(align)
 
-	applyFont(p, font)
-	applyDoubleWidth(p, doubleWidth)
-	applyAlignment(p, align)
-
-	lines := WrapAndAlignText(text, font, doubleWidth, align)
+	lines := wrapAndAlignText(text, font, doubleWidth, align)
 	for _, line := range lines {
-		p.Write(line)
-		p.Write("\n")
+		p.Printer.Write(line)
+		p.Printer.Write("\n")
 	}
 
-	resetPrinterState(p)
+	p.ResetPrinterState()
 }
 
-func ResetPrinter(p *escpos.Escpos) {
-	p.WriteRaw([]byte{0x1B, 0x40}) // ESC @
+func (p *Printer) HardResetPrinter() {
+	p.Printer.WriteRaw([]byte{0x1B, 0x40})
 }
 
-func LineBreak(p *escpos.Escpos) {
-	p.Write("\n")
+func (p *Printer) LineBreak() {
+	p.Printer.Write("\n")
 }

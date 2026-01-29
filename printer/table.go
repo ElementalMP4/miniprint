@@ -1,11 +1,9 @@
-package main
+package printer
 
 import (
 	"fmt"
 	"math"
 	"strings"
-
-	"github.com/hennedo/escpos"
 )
 
 type TableColumn struct {
@@ -196,17 +194,16 @@ func padRight(s string, width int) string {
 	return s + strings.Repeat(" ", width-l)
 }
 
-func (t *Table) Print(p *escpos.Escpos) {
-	ResetPrinter(p)
-	applyFont(p, t.font)
-	applyDoubleWidth(p, false)
-	applyAlignment(p, AlignLeft)
+func (t *Table) Print(p *Printer) {
+	p.ApplyFont(t.font)
+	p.ApplyDoubleWidth(false)
+	p.ApplyAlignment(AlignLeft)
 
 	lines := t.renderLines()
 	for _, l := range lines {
-		p.Write(sanitizeText(l))
-		p.Write("\n")
+		p.Printer.Write(sanitizeText(l))
+		p.Printer.Write("\n")
 	}
 
-	resetPrinterState(p)
+	p.ResetPrinterState()
 }
