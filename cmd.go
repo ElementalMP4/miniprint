@@ -35,13 +35,27 @@ var printCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		printerInterface.Execute()
+		if format.Settings.NoCut {
+			printerInterface.ExecuteWithoutCut()
+		} else {
+			printerInterface.Execute()
+		}
+		return nil
+	},
+}
+
+var cutCmd = &cobra.Command{
+	Use:   "cut",
+	Short: "Cut the receipt paper without adding any new content",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		printerInterface.Cut()
 		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(printCmd)
+	rootCmd.AddCommand(cutCmd)
 }
 
 func ExecuteCLI() error {

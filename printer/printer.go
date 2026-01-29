@@ -275,7 +275,10 @@ func (p *Printer) ExecuteWithoutCut() {
 }
 
 func (p *Printer) Cut() {
-	p.Printer.Cut()
+	p.Printer.WriteRaw([]byte{
+		0x1D, 0x56, 0x42, 0x00, // GS V 66 0 (FULL CUT)
+	})
+	p.Printer.Print() // WriteRaw writes to a buffer, Print flushes the buffer
 }
 
 func (p *Printer) HardResetPrinter() {

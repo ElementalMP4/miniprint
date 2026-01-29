@@ -1,4 +1,7 @@
 {
+  "settings": {
+    "noCut": true
+  },
   "elements": [
     {
       "type": "text",

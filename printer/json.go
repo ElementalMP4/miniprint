@@ -6,7 +6,12 @@ import (
 )
 
 type ReceiptFormat struct {
+	Settings FormatSettings   `json:"settings"`
 	Elements []ReceiptElement `json:"elements"`
+}
+
+type FormatSettings struct {
+	NoCut bool `json:"noCut"`
 }
 
 type ReceiptElement struct {
