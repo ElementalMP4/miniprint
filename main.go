@@ -8,8 +8,6 @@ import (
 var printerInterface printer.Printer
 
 func main() {
-	printerInterface.Initialise()
-
 	if err := ExecuteCLI(); err != nil {
 		os.Exit(1)
 	}
